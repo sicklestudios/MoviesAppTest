@@ -1,6 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get_state_manager/get_state_manager.dart';
+import 'package:get/get.dart';
 import 'package:tentwenty/res/widgets/custom_text_widgets.dart';
 import 'package:tentwenty/view_model/dashboard/dashboard_controller.dart';
 import 'package:tentwenty/views/dashboard/search_result.dart';
@@ -41,21 +41,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     decoration: InputDecoration(
                       hintText: 'Search TV shows, movies and more',
                       filled: true,
+                      prefixIcon: const Icon(Icons.search),
                       suffixIcon: IconButton(
                         icon: Icon(isSearching ? Icons.close : Icons.search),
                         onPressed: () {
                           setState(() {
-                            if (isSearching) {
-                              _searchController.clear();
-                            }
+                            if (isSearching) _searchController.clear();
                             isSearching = !isSearching;
                           });
                         },
                       ),
-
-                      prefixIcon: Icon(Icons.search),
-                      fillColor: Color.fromARGB(255, 242, 242, 246),
-
+                      fillColor: const Color(0xFFF2F2F6),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(25),
                         borderSide: BorderSide.none,
@@ -68,12 +64,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           if (!isSearching)
             IconButton(
-              icon: Icon(isSearching ? Icons.close : Icons.search),
+              icon: Icon(Icons.search),
               onPressed: () {
                 setState(() {
-                  if (isSearching) {
-                    _searchController.clear();
-                  }
+                  if (isSearching) _searchController.clear();
                   isSearching = !isSearching;
                 });
               },
@@ -83,74 +77,106 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: GetBuilder(
         init: DashboardController(),
         builder: (controller) {
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            itemCount: controller.upcomingMoviesList.length,
-            itemBuilder: (context, index) {
-              final movie = controller.upcomingMoviesList[index];
-              return InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MovieDetailScreen(movie: movie),
-                    ),
-                  );
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    color: Colors.grey[300],
+          return OrientationBuilder(
+            builder: (context, orientation) {
+              final isPortrait = orientation == Orientation.portrait;
+
+              if (isPortrait) {
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
                   ),
-                  clipBehavior: Clip.hardEdge,
-                  child: Stack(
-                    alignment: Alignment.bottomLeft,
-                    children: [
-                      AspectRatio(
-                        aspectRatio: 16 / 9,
-                        child: CachedNetworkImage(
-                          imageUrl:
-                              'https://image.tmdb.org/t/p/w500${movie.backdropPath}',
-                          fit: BoxFit.cover,
-                          errorWidget:
-                              (context, error, stackTrace) => Container(
-                                color: Colors.grey,
-                                child: Center(
-                                  child: Icon(Icons.image_not_supported),
-                                ),
-                              ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: [
-                              Colors.black.withOpacity(0.7),
-                              Colors.transparent,
-                            ],
-                          ),
-                        ),
-                        child: Text(
-                          movie.title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
+                  itemCount: controller.upcomingMoviesList.length,
+                  itemBuilder: (context, index) {
+                    return Column(
+                      children: [
+                        _buildMovieItem(controller.upcomingMoviesList[index]),
+                        SizedBox(height: 10),
+                      ],
+                    );
+                  },
+                );
+              } else {
+                return GridView.builder(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
                   ),
-                ),
-              );
+                  itemCount: controller.upcomingMoviesList.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 20,
+                    mainAxisSpacing: 20,
+                    childAspectRatio: 16 / 9,
+                  ),
+                  itemBuilder: (context, index) {
+                    return _buildMovieItem(
+                      controller.upcomingMoviesList[index],
+                    );
+                  },
+                );
+              }
             },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildMovieItem(dynamic movie) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => MovieDetailScreen(movie: movie)),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.grey[300],
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: Stack(
+          alignment: Alignment.bottomLeft,
+          children: [
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: CachedNetworkImage(
+                imageUrl:
+                    'https://image.tmdb.org/t/p/w500${movie.backdropPath}',
+                fit: BoxFit.cover,
+                errorWidget:
+                    (context, error, stackTrace) => Container(
+                      color: Colors.grey,
+                      child: const Center(
+                        child: Icon(Icons.image_not_supported),
+                      ),
+                    ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(12),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+                ),
+              ),
+              child: Text(
+                movie.title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
